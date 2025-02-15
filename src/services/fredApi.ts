@@ -1,0 +1,100 @@
+import axios from 'axios';
+
+const FRED_API_KEY = 'd387867269b36821a95c3a46c5603837';
+const BASE_URL = '/fred'; // Use relative URL for proxy
+
+export interface FredObservation {
+  date: string;
+  value: string;
+}
+
+export const fetchFredData = async (seriesId: string, observationStart: string = '2020-01-01'): Promise<FredObservation[]> => {
+  try {
+    console.log(`Fetching data for series: ${seriesId}`); // Debug log
+    
+    // Get current date in YYYY-MM-DD format, using local timezone
+    const now = new Date();
+    const today = now.getFullYear() + '-' + 
+                 String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                 String(now.getDate()).padStart(2, '0');
+    
+    // Base parameters
+    const params: Record<string, string> = {
+      series_id: seriesId,
+      api_key: FRED_API_KEY,
+      file_type: 'json',
+      observation_start: observationStart,
+      sort_order: 'asc',
+    };
+
+    // Add frequency parameter only for GDP (which is quarterly)
+    if (seriesId === 'GDPC1') {
+      params.frequency = 'q';
+    }
+
+    // For series that need realtime dates
+    if (['DGS10', 'MORTGAGE30US', 'CBBTCUSD'].includes(seriesId)) {
+      // Use today's date for both start and end to get latest values
+      params.realtime_start = today;
+      params.realtime_end = today;
+      params.output_type = '1'; // Ensure we get regular observations
+    }
+
+    console.log(`Request params for ${seriesId}:`, params); // Debug log
+
+    const response = await axios.get(`${BASE_URL}/series/observations`, {
+      params,
+      headers: {
+        'Accept': 'application/json',
+      }
+    });
+
+    console.log(`Response status for ${seriesId}:`, response.status); // Debug log
+
+    if (response.data && response.data.observations) {
+      console.log(`Got ${response.data.observations.length} observations for ${seriesId}`);
+      return response.data.observations;
+    } else {
+      console.error(`No observations found for ${seriesId}`, response.data);
+      throw new Error(`No data available for ${seriesId}`);
+    }
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      if (error.response) {
+        // The request was made and the server responded with a status code outside 2xx
+        console.error(`API Error for ${seriesId}:`, {
+          status: error.response.status,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+        const errorMessage = error.response.data?.error_message || 
+                           `API Error (${error.response.status}): ${error.message}`;
+        throw new Error(errorMessage);
+      } else if (error.request) {
+        // The request was made but no response was received
+        console.error(`Network Error for ${seriesId}:`, {
+          error: error.message,
+          request: error.request
+        });
+        throw new Error(`Network error: Unable to connect to FRED API. Please check your internet connection and try again.`);
+      } else {
+        console.error(`Request Setup Error for ${seriesId}:`, error.message);
+        throw new Error(`Request error: ${error.message}`);
+      }
+    }
+    console.error('Unknown error:', error);
+    throw error;
+  }
+};
+
+// Series IDs for different economic indicators
+export const SERIES_IDS = {
+  GDP: 'GDPC1', // Real Gross Domestic Product (Quarterly)
+  UNEMPLOYMENT: 'UNRATE', // Unemployment Rate
+  INFLATION: 'CPIAUCSL', // Consumer Price Index for All Urban Consumers
+  FEDERAL_FUNDS_RATE: 'FEDFUNDS', // Federal Funds Rate
+  TREASURY_10Y: 'DGS10', // 10-Year Treasury Rate
+  MORTGAGE_30Y: 'MORTGAGE30US', // 30-Year Fixed Rate Mortgage Average
+  SP500: 'SP500', // S&P 500
+  BITCOIN: 'CBBTCUSD', // Coinbase Bitcoin-USD Exchange Rate
+}; 
