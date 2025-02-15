@@ -26,38 +26,35 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
                  String(now.getDate()).padStart(2, '0');
     
     // Base parameters
-    const params: Record<string, string> = {
+    const params = new URLSearchParams({
       series_id: seriesId,
       api_key: FRED_API_KEY,
       file_type: 'json',
       observation_start: observationStart,
       sort_order: 'asc',
-    };
+    });
 
     // Add frequency parameter only for GDP (which is quarterly)
     if (seriesId === 'GDPC1') {
-      params.frequency = 'q';
+      params.append('frequency', 'q');
     }
 
     // For series that need realtime dates
     if (['DGS10', 'MORTGAGE30US', 'CBBTCUSD'].includes(seriesId)) {
-      // Use today's date for both start and end to get latest values
-      params.realtime_start = today;
-      params.realtime_end = today;
-      params.output_type = '1'; // Ensure we get regular observations
+      params.append('realtime_start', today);
+      params.append('realtime_end', today);
+      params.append('output_type', '1');
     }
 
-    console.log(`Request params for ${seriesId}:`, params); // Debug log
-
-    // Construct the full URL with the correct path
-    const url = `${BASE_URL}/series/observations`;
-    console.log(`Making request to: ${url}`); // Debug log
+    // Construct the full URL with parameters
+    const url = `${BASE_URL}/series/observations?${params.toString()}`;
+    console.log(`Making request to: ${url.replace(FRED_API_KEY, 'API_KEY_HIDDEN')}`); // Debug log without exposing API key
 
     const response = await axios.get(url, {
-      params,
       headers: {
         'Accept': 'application/json',
-      }
+        'Content-Type': 'application/json',
+      },
     });
 
     console.log(`Response status for ${seriesId}:`, response.status); // Debug log
@@ -77,8 +74,7 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
           status: error.response.status,
           data: error.response.data,
           headers: error.response.headers,
-          url: error.config?.url,
-          params: error.config?.params
+          url: error.config?.url?.replace(FRED_API_KEY, 'API_KEY_HIDDEN'),
         });
         const errorMessage = error.response.data?.error_message || 
                            `API Error (${error.response.status}): ${error.message}`;
@@ -88,10 +84,9 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
         console.error(`Network Error for ${seriesId}:`, {
           error: error.message,
           request: error.request,
-          url: error.config?.url,
-          params: error.config?.params
+          url: error.config?.url?.replace(FRED_API_KEY, 'API_KEY_HIDDEN'),
         });
-        throw new Error(`Network error: Unable to connect to FRED API. Please check your internet connection and try again.`);
+        throw new Error(`Network error: Unable to connect to FRED API. Check the console for details.`);
       } else {
         console.error(`Request Setup Error for ${seriesId}:`, error.message);
         throw new Error(`Request error: ${error.message}`);
