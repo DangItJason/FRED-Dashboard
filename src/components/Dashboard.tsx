@@ -113,7 +113,7 @@ const Dashboard = () => {
   return (
     <Container maxW="container.xl" py={8}>
       <Heading as="h1" mb={8} textAlign="center">
-        Macroeconomic Dashboard
+        Macroeconomic Dashboard v1.0
       </Heading>
       <Flex gap={8}>
         {/* Sidebar */}
