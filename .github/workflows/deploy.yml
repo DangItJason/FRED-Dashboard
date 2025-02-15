@@ -1,5 +1,6 @@
 name: Deploy to GitHub Pages
 
+# Workflow to build and deploy the React app to GitHub Pages
 on:
   push:
     branches:
