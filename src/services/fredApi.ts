@@ -17,7 +17,7 @@ export interface FredObservation {
 
 export const fetchFredData = async (seriesId: string, observationStart: string = '2020-01-01'): Promise<FredObservation[]> => {
   try {
-    console.log(`Fetching data for series: ${seriesId}`); // Debug log
+    console.log(`Fetching data for series: ${seriesId}`);
     
     // Get current date in YYYY-MM-DD format, using local timezone
     const now = new Date();
@@ -25,14 +25,13 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
                  String(now.getMonth() + 1).padStart(2, '0') + '-' + 
                  String(now.getDate()).padStart(2, '0');
     
-    // Base parameters
-    const params = new URLSearchParams({
-      series_id: seriesId,
-      api_key: FRED_API_KEY,
-      file_type: 'json',
-      observation_start: observationStart,
-      sort_order: 'asc',
-    });
+    // Create URLSearchParams for better parameter handling
+    const params = new URLSearchParams();
+    params.append('series_id', seriesId);
+    params.append('api_key', FRED_API_KEY);
+    params.append('file_type', 'json');
+    params.append('observation_start', observationStart);
+    params.append('sort_order', 'asc');
 
     // Add frequency parameter only for GDP (which is quarterly)
     if (seriesId === 'GDPC1') {
@@ -48,51 +47,59 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
 
     // Construct the full URL with parameters
     const url = `${BASE_URL}/series/observations?${params.toString()}`;
-    console.log(`Making request to: ${url.replace(FRED_API_KEY, 'API_KEY_HIDDEN')}`); // Debug log without exposing API key
+    console.log(`Making request to: ${url.replace(FRED_API_KEY, 'API_KEY_HIDDEN')}`);
 
     const response = await axios.get(url, {
       headers: {
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
+      // Add timeout and validateStatus
+      timeout: 10000,
+      validateStatus: (status) => status >= 200 && status < 300,
     });
 
-    console.log(`Response status for ${seriesId}:`, response.status); // Debug log
+    if (!response.data || !response.data.observations) {
+      console.error(`Invalid response format for ${seriesId}:`, response.data);
+      throw new Error(`Invalid response format for ${seriesId}`);
+    }
 
-    if (response.data && response.data.observations) {
-      console.log(`Got ${response.data.observations.length} observations for ${seriesId}`);
-      return response.data.observations;
-    } else {
-      console.error(`No observations found for ${seriesId}`, response.data);
+    const observations = response.data.observations;
+    if (observations.length === 0) {
+      console.warn(`No observations found for ${seriesId}`);
       throw new Error(`No data available for ${seriesId}`);
     }
+
+    console.log(`Successfully fetched ${observations.length} points for ${seriesId}`);
+    return observations;
+
   } catch (error) {
     if (axios.isAxiosError(error)) {
       if (error.response) {
-        // The request was made and the server responded with a status code outside 2xx
+        // Server responded with error
         console.error(`API Error for ${seriesId}:`, {
           status: error.response.status,
           data: error.response.data,
           headers: error.response.headers,
           url: error.config?.url?.replace(FRED_API_KEY, 'API_KEY_HIDDEN'),
+          params: error.config?.params
         });
+        
         const errorMessage = error.response.data?.error_message || 
-                           `API Error (${error.response.status}): ${error.message}`;
+          `API Error (${error.response.status}): ${error.message}`;
         throw new Error(errorMessage);
       } else if (error.request) {
-        // The request was made but no response was received
+        // Request made but no response received
         console.error(`Network Error for ${seriesId}:`, {
-          error: error.message,
-          request: error.request,
+          message: error.message,
+          code: error.code,
           url: error.config?.url?.replace(FRED_API_KEY, 'API_KEY_HIDDEN'),
         });
-        throw new Error(`Network error: Unable to connect to FRED API. Check the console for details.`);
-      } else {
-        console.error(`Request Setup Error for ${seriesId}:`, error.message);
-        throw new Error(`Request error: ${error.message}`);
+        throw new Error(`Network error: Unable to connect to FRED API. Please try again later.`);
       }
     }
-    console.error('Unknown error:', error);
+    // Unknown error
+    console.error(`Unexpected error for ${seriesId}:`, error);
     throw error;
   }
 };
