@@ -1,6 +1,10 @@
 import axios from 'axios';
 
-const FRED_API_KEY = 'd387867269b36821a95c3a46c5603837';
+const FRED_API_KEY = import.meta.env.VITE_FRED_API_KEY;
+if (!FRED_API_KEY) {
+  throw new Error('FRED API key not found. Please check your .env file.');
+}
+
 const BASE_URL = '/fred'; // Use relative URL for proxy
 
 export interface FredObservation {

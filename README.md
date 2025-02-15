@@ -26,11 +26,18 @@ A beautiful and interactive dashboard that displays key macroeconomic indicators
    ```bash
    npm install
    ```
-3. Start the development server:
+3. Set up environment variables:
+   - Copy `.env.example` to `.env`
+   - Add your FRED API key to the `.env` file:
+     ```
+     VITE_FRED_API_KEY=your_fred_api_key_here
+     ```
+   - You can get a FRED API key from: https://fred.stlouisfed.org/docs/api/api_key.html
+4. Start the development server:
    ```bash
    npm run dev
    ```
-4. Open your browser and navigate to `http://localhost:5173`
+5. Open your browser and navigate to `http://localhost:5173`
 
 ## Technologies Used
 
@@ -43,7 +50,19 @@ A beautiful and interactive dashboard that displays key macroeconomic indicators
 
 ## Environment Variables
 
-The FRED API key is already included in the code. In a production environment, you should move this to an environment variable.
+The following environment variables are required:
+
+- `VITE_FRED_API_KEY`: Your FRED API key
+
+## Deployment
+
+This project is automatically deployed to GitHub Pages using GitHub Actions. The deployment workflow:
+
+1. Triggers on pushes to the main branch
+2. Builds the project with environment variables
+3. Deploys to GitHub Pages
+
+You can view the live deployment at: https://dangitjason.github.io/FRED-Dashboard/
 
 ## License
 

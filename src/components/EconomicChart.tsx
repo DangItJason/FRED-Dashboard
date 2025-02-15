@@ -1,4 +1,3 @@
-import React from 'react';
 import { Box, Heading, Spinner, Text } from '@chakra-ui/react';
 import {
   LineChart,
@@ -158,6 +157,7 @@ const EconomicChart = ({ title, data, isLoading, error, color = '#2B6CB0', serie
               tickFormatter={(value) => formatValue(value, seriesId)}
               tickMargin={35}
               width={80}
+              domain={yAxisDomain}
             >
               <Label
                 value={yAxisConfig.label}
