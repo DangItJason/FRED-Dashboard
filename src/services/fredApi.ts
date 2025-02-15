@@ -5,7 +5,10 @@ if (!FRED_API_KEY) {
   throw new Error('FRED API key not found. Please check your .env file.');
 }
 
-const BASE_URL = '/fred'; // Use relative URL for proxy
+// Use the full URL in production, proxy in development
+const BASE_URL = import.meta.env.PROD 
+  ? 'https://api.stlouisfed.org/fred'
+  : '/fred';
 
 export interface FredObservation {
   date: string;
