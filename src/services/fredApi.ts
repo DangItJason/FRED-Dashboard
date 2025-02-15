@@ -45,8 +45,11 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
       params.append('output_type', '1');
     }
 
-    // Construct the full URL with parameters
-    const url = `${BASE_URL}/series/observations?${params.toString()}`;
+    // In production, use CORS proxy
+    const url = import.meta.env.PROD
+      ? `https://api.allorigins.win/get?url=${encodeURIComponent(`${BASE_URL}/series/observations?${params.toString()}`)}`
+      : `${BASE_URL}/series/observations?${params.toString()}`;
+
     console.log(`Making request to: ${url.replace(FRED_API_KEY, 'API_KEY_HIDDEN')}`);
 
     const response = await axios.get(url, {
@@ -54,17 +57,21 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
         'Accept': 'application/json',
         'Content-Type': 'application/json',
       },
-      // Add timeout and validateStatus
       timeout: 10000,
       validateStatus: (status) => status >= 200 && status < 300,
     });
 
-    if (!response.data || !response.data.observations) {
-      console.error(`Invalid response format for ${seriesId}:`, response.data);
+    // Handle the CORS proxy response format
+    const data = import.meta.env.PROD
+      ? JSON.parse(response.data.contents)
+      : response.data;
+
+    if (!data || !data.observations) {
+      console.error(`Invalid response format for ${seriesId}:`, data);
       throw new Error(`Invalid response format for ${seriesId}`);
     }
 
-    const observations = response.data.observations;
+    const observations = data.observations;
     if (observations.length === 0) {
       console.warn(`No observations found for ${seriesId}`);
       throw new Error(`No data available for ${seriesId}`);
