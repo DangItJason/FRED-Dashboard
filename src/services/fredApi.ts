@@ -49,7 +49,11 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
 
     console.log(`Request params for ${seriesId}:`, params); // Debug log
 
-    const response = await axios.get(`${BASE_URL}/series/observations`, {
+    // Construct the full URL with the correct path
+    const url = `${BASE_URL}/series/observations`;
+    console.log(`Making request to: ${url}`); // Debug log
+
+    const response = await axios.get(url, {
       params,
       headers: {
         'Accept': 'application/json',
@@ -72,7 +76,9 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
         console.error(`API Error for ${seriesId}:`, {
           status: error.response.status,
           data: error.response.data,
-          headers: error.response.headers
+          headers: error.response.headers,
+          url: error.config?.url,
+          params: error.config?.params
         });
         const errorMessage = error.response.data?.error_message || 
                            `API Error (${error.response.status}): ${error.message}`;
@@ -81,7 +87,9 @@ export const fetchFredData = async (seriesId: string, observationStart: string =
         // The request was made but no response was received
         console.error(`Network Error for ${seriesId}:`, {
           error: error.message,
-          request: error.request
+          request: error.request,
+          url: error.config?.url,
+          params: error.config?.params
         });
         throw new Error(`Network error: Unable to connect to FRED API. Please check your internet connection and try again.`);
       } else {
